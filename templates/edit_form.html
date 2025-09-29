@@ -1,0 +1,64 @@
+<div class="grid grid-cols-1 gap-4">
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Title *</label>
+        <input type="text" name="title" value="{{ issue.title }}" required 
+               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Description</label>
+        <textarea name="description" rows="3" 
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ issue.description or '' }}</textarea>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Reporter *</label>
+            <input type="text" name="reporter" value="{{ issue.reporter }}" required 
+                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Owner</label>
+            <input type="text" name="owner" value="{{ issue.owner or '' }}" 
+                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+        </div>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Organisation</label>
+        <select name="organization_id" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <option value="">Select Organisation</option>
+            {% for organization in organizations %}
+                <option value="{{ organization.id }}" {% if issue.organization_id == organization.id %}selected{% endif %}>{{ organization.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Status</label>
+        <select name="status" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <option value="Open" {% if issue.status == 'Open' %}selected{% endif %}>Open</option>
+            <option value="In Progress" {% if issue.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+            <option value="Completed" {% if issue.status == 'Completed' %}selected{% endif %}>Completed</option>
+            <option value="Pending Info" {% if issue.status == 'Pending Info' %}selected{% endif %}>Pending Info</option>
+        </select>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Importance</label>
+        <select name="importance" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <option value="Low" {% if issue.importance == 'Low' %}selected{% endif %}>Low</option>
+            <option value="Medium" {% if issue.importance == 'Medium' %}selected{% endif %}>Medium</option>
+            <option value="High" {% if issue.importance == 'High' %}selected{% endif %}>High</option>
+        </select>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Date Reported</label>
+            <input type="date" name="date_reported" 
+                   value="{{ issue.date_reported.strftime('%Y-%m-%d') if issue.date_reported else '' }}"
+                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Target Date</label>
+            <input type="date" name="target_date" 
+                   value="{{ issue.target_date.strftime('%Y-%m-%d') if issue.target_date else '' }}"
+                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+        </div>
+    </div>
+</div>

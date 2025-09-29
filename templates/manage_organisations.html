@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Organisations - Issues Log (Lite){% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-bold text-gray-900">Manage Organisations</h2>
+        <button onclick="openAddOrganizationModal()" 
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            + Add Organisation
+        </button>
+    </div>
+
+    <!-- Organisations List -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        {% if organizations %}
+            <ul class="divide-y divide-gray-200">
+                {% for org in organizations %}
+                <li class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-medium text-gray-900">{{ org.name }}</h3>
+                            <p class="text-sm text-gray-500">
+                                Created {{ org.created_at.strftime('%Y-%m-%d') }}
+                                {% if org.issue_count > 0 %}
+                                    • Used by {{ org.issue_count }} issue{{ 's' if org.issue_count != 1 else '' }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            {% if org.issue_count > 0 %}
+                                <a href="/?organization={{ org.id }}" 
+                                   class="text-indigo-600 hover:text-indigo-900 text-sm">
+                                    View Issues
+                                </a>
+                                <button onclick="showDeleteError({{ org.id }}, '{{ org.name }}', {{ org.issue_count }})" 
+                                        class="text-red-600 hover:text-red-900 text-sm">
+                                    Delete
+                                </button>
+                            {% else %}
+                                <button onclick="confirmDeleteOrganization({{ org.id }}, '{{ org.name }}')" 
+                                        class="text-red-600 hover:text-red-900 text-sm">
+                                    Delete
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="px-6 py-12 text-center">
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No organisations yet</h3>
+                <p class="text-gray-500 mb-4">Create your first organisation to get started.</p>
+                <button onclick="openAddOrganizationModal()" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    + Add Organisation
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Organisation Modal -->
+<div id="addOrganizationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="addOrganizationForm">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Add Organisation</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Organisation Name *</label>
+                        <input type="text" name="name" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" 
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Add
+                    </button>
+                    <button type="button" onclick="closeAddOrganizationModal()" 
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteOrganizationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="deleteModalTitle">
+                            Delete Organisation
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500" id="deleteModalMessage">
+                                Are you sure you want to delete this organisation? This action cannot be undone.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" onclick="deleteOrganization()"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    Delete
+                </button>
+                <button type="button" onclick="closeDeleteOrganizationModal()"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div id="errorModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">
+                            Cannot Delete Organisation
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500" id="errorMessage">
+                                <!-- Error message will be inserted here -->
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" onclick="closeErrorModal()"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentOrganizationId = null;
+
+function openAddOrganizationModal() {
+    document.getElementById('addOrganizationModal').classList.remove('hidden');
+}
+
+function closeAddOrganizationModal() {
+    document.getElementById('addOrganizationModal').classList.add('hidden');
+    document.getElementById('addOrganizationForm').reset();
+}
+
+function confirmDeleteOrganization(orgId, orgName) {
+    currentOrganizationId = orgId;
+    document.getElementById('deleteModalTitle').textContent = 'Delete Organisation';
+    document.getElementById('deleteModalMessage').textContent = `Delete organisation '${orgName}'? This cannot be undone.`;
+    document.getElementById('deleteOrganizationModal').classList.remove('hidden');
+}
+
+function closeDeleteOrganizationModal() {
+    document.getElementById('deleteOrganizationModal').classList.add('hidden');
+    currentOrganizationId = null;
+}
+
+function deleteOrganization() {
+    if (currentOrganizationId) {
+        fetch(`/organizations/${currentOrganizationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                showDeleteError(currentOrganizationId, data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete organisation');
+        });
+    }
+}
+
+function showDeleteError(orgId, orgName, issueCount) {
+    let message;
+    if (typeof orgName === 'string' && issueCount !== undefined) {
+        message = `Can't delete '${orgName}'. It's used by ${issueCount} issue${issueCount !== 1 ? 's' : ''}. Reassign or close those issues first.`;
+    } else {
+        message = orgName; // orgName is actually the error message in this case
+    }
+    
+    document.getElementById('errorMessage').textContent = message;
+    document.getElementById('errorModal').classList.remove('hidden');
+}
+
+function closeErrorModal() {
+    document.getElementById('errorModal').classList.add('hidden');
+}
+
+// Add organisation form submission
+document.getElementById('addOrganizationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    fetch('/organizations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeAddOrganizationModal();
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to create organisation');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to create organisation');
+    });
+});
+
+// Close modals when clicking outside
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('fixed')) {
+        closeAddOrganizationModal();
+        closeDeleteOrganizationModal();
+        closeErrorModal();
+    }
+});
+</script>
+{% endblock %}

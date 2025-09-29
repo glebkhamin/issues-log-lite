@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Issues Log (Lite){% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'priority-p1': '#dc2626',
+                        'priority-p2': '#ea580c',
+                        'priority-p3': '#2563eb',
+                        'priority-p4': '#6b7280'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">Issues Log (Lite)</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="{{ url_for('index') }}" class="text-gray-700 hover:text-gray-900">Issues</a>
+                    <a href="{{ url_for('manage_organisations') }}" class="text-gray-700 hover:text-gray-900">Manage Organisations</a>
+                    <a href="{{ url_for('import_csv') }}" class="text-gray-700 hover:text-gray-900">Import</a>
+                    <form method="POST" action="{{ url_for('logout') }}" class="inline">
+                        <button type="submit" class="text-gray-700 hover:text-gray-900">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-full mx-auto py-6 sm:px-4 lg:px-6">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'error' if category == 'error' else 'success' }} bg-{{ 'red' if category == 'error' else 'green' }}-100 border border-{{ 'red' if category == 'error' else 'green' }}-400 text-{{ 'red' if category == 'error' else 'green' }}-700 px-4 py-3 rounded mb-2">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // HTMX configuration
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            evt.detail.headers['X-CSRFToken'] = '{{ csrf_token() if csrf_token else "" }}';
+        });
+    </script>
+</body>
+</html>
