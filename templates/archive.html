@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Archive - Thinking Machine - Issues Log{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-2">Archived Issues</h2>
+        <p class="text-gray-600">Completed issues that have been automatically archived</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input type="text" name="q" value="{{ current_filters.q }}" 
+                       placeholder="Search issues..." 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    <option value="">All Statuses</option>
+                    {% for status in statuses %}
+                        <option value="{{ status }}" {% if current_filters.status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+                <select name="owner" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    <option value="">All Owners</option>
+                    {% for owner in owners %}
+                        <option value="{{ owner }}" {% if current_filters.owner == owner %}selected{% endif %}>{{ owner }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Organisation</label>
+                <select name="organization" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    <option value="">All Organisations</option>
+                    {% for organization in organizations %}
+                        <option value="{{ organization.id }}" {% if current_filters.organization == organization.id|string %}selected{% endif %}>{{ organization.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="md:col-span-4 flex space-x-2">
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">
+                    Filter
+                </button>
+                <a href="{{ url_for('archive') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-400">
+                    Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Issues Table -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        {% if issues %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title & Description</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organisation</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Reported</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reported By</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Importance</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target Date</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="issuesTableBody" class="bg-white divide-y divide-gray-200">
+                    {% for issue in issues %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-3 py-2 text-sm">
+                            <div class="font-medium text-gray-900">{{ issue.title }}</div>
+                            <div class="text-gray-500 mt-1">{{ issue.description }}</div>
+                        </td>
+                        <td class="px-3 py-2 text-sm text-gray-900">
+                            {{ issue.organization.name if issue.organization else 'No Organisation' }}
+                        </td>
+                        <td class="px-3 py-2 text-sm">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if issue.status == 'Completed' %}bg-green-100 text-green-800
+                                {% elif issue.status == 'In Progress' %}bg-blue-100 text-blue-800
+                                {% elif issue.status == 'Pending Info' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ issue.status }}
+                            </span>
+                        </td>
+                        <td class="px-3 py-2 text-sm text-gray-900">{{ issue.date_reported.strftime('%Y-%m-%d') }}</td>
+                        <td class="px-3 py-2 text-sm text-gray-900">{{ issue.reporter }}</td>
+                        <td class="px-3 py-2 text-sm text-gray-900">{{ issue.owner or 'Unassigned' }}</td>
+                        <td class="px-3 py-2 text-sm">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if issue.importance == 'High' %}bg-red-100 text-red-800
+                                {% elif issue.importance == 'Medium' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                {{ issue.importance }}
+                            </span>
+                        </td>
+                        <td class="px-3 py-2 text-sm text-gray-900">
+                            {{ issue.target_date.strftime('%Y-%m-%d') if issue.target_date else 'No target' }}
+                        </td>
+                        <td class="px-3 py-2 text-sm text-gray-500">
+                            <div class="flex flex-col space-y-1">
+                                <button onclick="unarchiveIssue({{ issue.id }})" 
+                                        class="text-indigo-600 hover:text-indigo-900 text-xs">
+                                    Restore
+                                </button>
+                                <button onclick="openEditModal({{ issue.id }})" 
+                                        class="text-gray-600 hover:text-gray-900 text-xs">
+                                    Edit
+                                </button>
+                                <button onclick="openDeleteModal({{ issue.id }}, '{{ issue.title }}')" 
+                                        class="text-red-600 hover:text-red-900 text-xs">
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No archived issues</h3>
+            <p class="mt-1 text-sm text-gray-500">Completed issues will appear here automatically.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function unarchiveIssue(issueId) {
+    if (confirm('Are you sure you want to restore this issue to the active list?')) {
+        fetch(`/issues/${issueId}/unarchive`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to restore issue: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to restore issue');
+        });
+    }
+}
+
+function openEditModal(issueId) {
+    // Redirect to main page with edit modal
+    window.location.href = `{{ url_for('index') }}?edit=${issueId}`;
+}
+
+function openDeleteModal(issueId, title) {
+    if (confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
+        fetch(`/issues/${issueId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to delete issue: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete issue');
+        });
+    }
+}
+</script>
+{% endblock %}

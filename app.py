@@ -51,8 +51,8 @@ def index():
     organization_filter = request.args.get('organization', '')
     search_query = request.args.get('q', '')
 
-    # Build query
-    query = Issue.query
+    # Build query - exclude archived issues by default
+    query = Issue.query.filter(Issue.archived == False)
 
     if status_filter:
         query = query.filter(Issue.status == status_filter)
@@ -127,6 +127,11 @@ def update_issue(issue_id):
     issue.status = data.get('status', issue.status)
     issue.importance = data.get('importance', issue.importance)
     issue.target_date = datetime.strptime(data['target_date'], '%Y-%m-%d').date() if data.get('target_date') else None
+    
+    # Auto-archive when status is set to "Completed"
+    if issue.status == 'Completed':
+        issue.archived = True
+    
     issue.updated_at = datetime.utcnow()
     
     db.session.commit()
@@ -223,6 +228,70 @@ def manage_organisations():
             'issue_count': issue_count
         })
     return render_template('manage_organisations.html', organizations=org_data)
+
+@app.route('/archive')
+@require_auth
+def archive():
+    """View archived issues"""
+    # Get filter parameters
+    status_filter = request.args.get('status', '')
+    owner_filter = request.args.get('owner', '')
+    organization_filter = request.args.get('organization', '')
+    search_query = request.args.get('q', '')
+
+    # Build query - only show archived issues
+    query = Issue.query.filter(Issue.archived == True)
+
+    if status_filter:
+        query = query.filter(Issue.status == status_filter)
+    if owner_filter:
+        query = query.filter(Issue.owner == owner_filter)
+    if organization_filter:
+        query = query.filter(Issue.organization_id == organization_filter)
+    if search_query:
+        query = query.filter(
+            (Issue.title.contains(search_query)) |
+            (Issue.description.contains(search_query)) |
+            (Issue.reporter.contains(search_query))
+        )
+
+    # Sort by date_reported (oldest first)
+    query = query.order_by(Issue.date_reported.asc())
+
+    issues = query.all()
+
+    # Get filter options
+    statuses = db.session.query(Issue.status).filter(Issue.archived == True).distinct().all()
+    owners = db.session.query(Issue.owner).filter(Issue.owner.isnot(None), Issue.archived == True).distinct().all()
+    organizations = Organization.query.all()
+
+    return render_template('archive.html', 
+                         issues=issues, 
+                         statuses=[s[0] for s in statuses],
+                         owners=[o[0] for o in owners],
+                         organizations=organizations,
+                         current_filters={
+                             'status': status_filter,
+                             'owner': owner_filter,
+                             'organization': organization_filter,
+                             'q': search_query
+                         })
+
+@app.route('/issues/<int:issue_id>/unarchive', methods=['POST'])
+@require_auth
+def unarchive_issue(issue_id):
+    """Unarchive an issue (restore it to active status)"""
+    issue = Issue.query.get_or_404(issue_id)
+    
+    if not issue.archived:
+        return jsonify({'success': False, 'error': 'Issue is not archived'}), 400
+    
+    # Unarchive the issue
+    issue.archived = False
+    issue.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+    return jsonify({'success': True})
 
 @app.route('/export.csv')
 @require_auth
@@ -421,6 +490,19 @@ def migrate_database():
             
             conn.commit()
             print(f"Successfully migrated {len(issue_ids)} issues with display_order")
+        
+        # Check if archived column exists
+        if 'archived' not in columns:
+            print("Adding archived column to issue table...")
+            
+            # Add the archived column
+            cursor.execute("ALTER TABLE issue ADD COLUMN archived BOOLEAN DEFAULT 0")
+            
+            # Auto-archive any existing completed issues
+            cursor.execute("UPDATE issue SET archived = 1 WHERE status = 'Completed'")
+            
+            conn.commit()
+            print("Successfully added archived column and auto-archived completed issues")
         
         conn.close()
         

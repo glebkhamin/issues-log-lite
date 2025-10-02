@@ -219,3 +219,105 @@ def test_delete_issue(auth_client, sample_organization):
     
     # Verify issue is deleted
     assert Issue.query.get(issue_id) is None
+
+def test_auto_archive_completed_issue(auth_client, sample_organization):
+    """Test that issues are automatically archived when status is set to Completed"""
+    # Create an issue
+    issue = Issue(
+        title='Test Issue for Archive',
+        description='This issue will be completed and archived',
+        reporter='Test User',
+        organization_id=sample_organization.id,
+        status='Open',
+        importance='Medium',
+        date_reported=date.today()
+    )
+    db.session.add(issue)
+    db.session.commit()
+    issue_id = issue.id
+    
+    # Verify issue is not archived initially
+    assert issue.archived == False
+    
+    # Update status to Completed
+    response = auth_client.post(f'/issues/{issue_id}', 
+                               data=json.dumps({
+                                   'title': 'Test Issue for Archive',
+                                   'description': 'This issue will be completed and archived',
+                                   'reporter': 'Test User',
+                                   'owner': 'Test Owner',
+                                   'organization_id': sample_organization.id,
+                                   'status': 'Completed',
+                                   'importance': 'Medium',
+                                   'target_date': '2024-12-31'
+                               }),
+                               content_type='application/json')
+    
+    assert response.status_code == 200
+    
+    # Verify issue is now archived
+    updated_issue = Issue.query.get(issue_id)
+    assert updated_issue.archived == True
+    assert updated_issue.status == 'Completed'
+
+def test_archive_page_loads(auth_client):
+    """Test that the archive page loads correctly"""
+    response = auth_client.get('/archive')
+    assert response.status_code == 200
+    assert b'Archived Issues' in response.data
+
+def test_unarchive_issue(auth_client, sample_organization):
+    """Test unarchiving an issue"""
+    # Create and archive an issue
+    issue = Issue(
+        title='Test Archived Issue',
+        description='This issue is archived',
+        reporter='Test User',
+        organization_id=sample_organization.id,
+        status='Completed',
+        importance='Medium',
+        date_reported=date.today(),
+        archived=True
+    )
+    db.session.add(issue)
+    db.session.commit()
+    issue_id = issue.id
+    
+    # Verify issue is archived
+    assert issue.archived == True
+    
+    # Unarchive the issue
+    response = auth_client.post(f'/issues/{issue_id}/unarchive')
+    assert response.status_code == 200
+    
+    data = json.loads(response.data)
+    assert data['success'] == True
+    
+    # Verify issue is no longer archived
+    updated_issue = Issue.query.get(issue_id)
+    assert updated_issue.archived == False
+
+def test_unarchive_non_archived_issue(auth_client, sample_organization):
+    """Test that unarchiving a non-archived issue fails"""
+    # Create a non-archived issue
+    issue = Issue(
+        title='Test Non-Archived Issue',
+        description='This issue is not archived',
+        reporter='Test User',
+        organization_id=sample_organization.id,
+        status='Open',
+        importance='Medium',
+        date_reported=date.today(),
+        archived=False
+    )
+    db.session.add(issue)
+    db.session.commit()
+    issue_id = issue.id
+    
+    # Try to unarchive the issue
+    response = auth_client.post(f'/issues/{issue_id}/unarchive')
+    assert response.status_code == 400
+    
+    data = json.loads(response.data)
+    assert data['success'] == False
+    assert 'not archived' in data['error']
