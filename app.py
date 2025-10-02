@@ -380,9 +380,53 @@ def reorder_issues():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+def migrate_database():
+    """Add display_order column to existing issues table"""
+    import sqlite3
+    
+    db_path = 'db.sqlite3'
+    
+    # Check if database exists
+    if not os.path.exists(db_path):
+        return
+    
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Check if display_order column already exists
+        cursor.execute("PRAGMA table_info(issue)")
+        columns = [column[1] for column in cursor.fetchall()]
+        
+        if 'display_order' not in columns:
+            print("Adding display_order column to issue table...")
+            
+            # Add the display_order column
+            cursor.execute("ALTER TABLE issue ADD COLUMN display_order INTEGER DEFAULT 0")
+            
+            # Set display_order for existing issues based on their current order
+            cursor.execute("SELECT id FROM issue ORDER BY date_reported ASC")
+            issue_ids = cursor.fetchall()
+            
+            for index, (issue_id,) in enumerate(issue_ids):
+                cursor.execute("UPDATE issue SET display_order = ? WHERE id = ?", (index, issue_id))
+            
+            conn.commit()
+            print(f"Successfully migrated {len(issue_ids)} issues with display_order")
+        
+        conn.close()
+        
+    except Exception as e:
+        print(f"Migration failed: {e}")
+        if 'conn' in locals():
+            conn.close()
+
 def init_db():
     """Initialize database with sample data"""
     with app.app_context():
+        # Run migration first
+        migrate_database()
         db.create_all()
         
         # Create sample organisations
