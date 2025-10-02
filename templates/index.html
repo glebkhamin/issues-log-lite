@@ -88,9 +88,9 @@
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-white divide-y divide-gray-200" id="issuesTableBody">
                         {% for issue in issues %}
-                        <tr class="hover:bg-gray-50">
+                        <tr class="hover:bg-gray-50 draggable-row" draggable="true" data-issue-id="{{ issue.id }}">
                             <td class="px-3 py-2">
                                 <div class="font-semibold text-gray-900">{{ issue.title }}</div>
                                 {% if issue.description %}
@@ -570,5 +570,144 @@ document.addEventListener('click', function(e) {
         closeAddOrganizationModal();
     }
 });
+
+// Drag and Drop functionality
+let draggedElement = null;
+let draggedOverElement = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tableBody = document.getElementById('issuesTableBody');
+    if (!tableBody) return;
+
+    // Add drag event listeners to all draggable rows
+    const draggableRows = tableBody.querySelectorAll('.draggable-row');
+    draggableRows.forEach(row => {
+        row.addEventListener('dragstart', handleDragStart);
+        row.addEventListener('dragend', handleDragEnd);
+        row.addEventListener('dragover', handleDragOver);
+        row.addEventListener('drop', handleDrop);
+        row.addEventListener('dragenter', handleDragEnter);
+        row.addEventListener('dragleave', handleDragLeave);
+    });
+});
+
+function handleDragStart(e) {
+    draggedElement = this;
+    this.style.opacity = '0.5';
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.outerHTML);
+}
+
+function handleDragEnd(e) {
+    this.style.opacity = '';
+    this.style.backgroundColor = '';
+    
+    // Remove all drag-over styling
+    const rows = document.querySelectorAll('.draggable-row');
+    rows.forEach(row => {
+        row.style.backgroundColor = '';
+        row.classList.remove('drag-over');
+    });
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    e.preventDefault();
+    if (this !== draggedElement) {
+        this.style.backgroundColor = '#f3f4f6';
+        this.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    if (this !== draggedElement) {
+        this.style.backgroundColor = '';
+        this.classList.remove('drag-over');
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    
+    if (this !== draggedElement) {
+        // Get the table body
+        const tableBody = document.getElementById('issuesTableBody');
+        const rows = Array.from(tableBody.querySelectorAll('.draggable-row'));
+        
+        // Find the positions
+        const draggedIndex = rows.indexOf(draggedElement);
+        const targetIndex = rows.indexOf(this);
+        
+        if (draggedIndex !== -1 && targetIndex !== -1) {
+            // Move the element in the DOM
+            if (draggedIndex < targetIndex) {
+                this.parentNode.insertBefore(draggedElement, this.nextSibling);
+            } else {
+                this.parentNode.insertBefore(draggedElement, this);
+            }
+            
+            // Update the order on the server
+            updateIssueOrder();
+        }
+    }
+    
+    this.style.backgroundColor = '';
+    this.classList.remove('drag-over');
+    return false;
+}
+
+function updateIssueOrder() {
+    const tableBody = document.getElementById('issuesTableBody');
+    const rows = tableBody.querySelectorAll('.draggable-row');
+    const issueIds = Array.from(rows).map(row => row.getAttribute('data-issue-id'));
+    
+    fetch('/issues/reorder', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            issue_ids: issueIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show a subtle success indicator
+            showReorderSuccess();
+        } else {
+            console.error('Failed to reorder issues:', data.error);
+            // Optionally show an error message
+        }
+    })
+    .catch(error => {
+        console.error('Error reordering issues:', error);
+    });
+}
+
+function showReorderSuccess() {
+    // Create a temporary success message
+    const successMsg = document.createElement('div');
+    successMsg.textContent = 'Issues reordered successfully!';
+    successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
+    successMsg.style.transition = 'opacity 0.3s ease';
+    
+    document.body.appendChild(successMsg);
+    
+    // Remove after 2 seconds
+    setTimeout(() => {
+        successMsg.style.opacity = '0';
+        setTimeout(() => {
+            if (successMsg.parentNode) {
+                successMsg.parentNode.removeChild(successMsg);
+            }
+        }, 300);
+    }, 2000);
+}
 </script>
 {% endblock %}

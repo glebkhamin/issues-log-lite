@@ -67,8 +67,8 @@ def index():
             (Issue.reporter.contains(search_query))
         )
 
-    # Always sort by date_reported (oldest first = most important)
-    query = query.order_by(Issue.date_reported.asc())
+    # Sort by display_order first (for manual ordering), then by date_reported (oldest first = most important)
+    query = query.order_by(Issue.display_order.asc(), Issue.date_reported.asc())
 
     issues = query.all()
 
@@ -354,6 +354,31 @@ def import_csv():
             return redirect(url_for('index'))
     
     return render_template('import.html')
+
+@app.route('/issues/reorder', methods=['POST'])
+@require_auth
+def reorder_issues():
+    """Reorder issues based on drag and drop"""
+    try:
+        data = request.get_json()
+        issue_ids = data.get('issue_ids', [])
+        
+        if not issue_ids:
+            return jsonify({'success': False, 'error': 'No issue IDs provided'}), 400
+        
+        # Update the display_order for each issue based on its position
+        for index, issue_id in enumerate(issue_ids):
+            issue = Issue.query.get(issue_id)
+            if issue:
+                issue.display_order = index
+                issue.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def init_db():
     """Initialize database with sample data"""

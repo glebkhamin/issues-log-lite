@@ -28,6 +28,7 @@ class Issue(db.Model):
     importance = db.Column(db.String(20), default='Medium')  # High, Medium, Low
     date_reported = db.Column(db.Date, default=datetime.utcnow().date)
     target_date = db.Column(db.Date)
+    display_order = db.Column(db.Integer, default=0)  # For manual ordering
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
