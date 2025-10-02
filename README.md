@@ -1,4 +1,4 @@
-# Issues Log (Lite)
+# Thinking Machine - Issues Log
 
 A lightweight Flask application for tracking issues with HTMX and Tailwind CSS. No React, no Docker - just simple, fast web development.
 

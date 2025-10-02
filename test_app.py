@@ -32,7 +32,7 @@ def test_login_page(client):
     """Test login page loads"""
     response = client.get('/login')
     assert response.status_code == 200
-    assert b'Issues Log (Lite)' in response.data
+    assert b'Thinking Machine - Issues Log' in response.data
 
 def test_login_success(client):
     """Test successful login"""
