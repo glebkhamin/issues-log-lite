@@ -384,10 +384,17 @@ def migrate_database():
     """Add display_order column to existing issues table"""
     import sqlite3
     
-    db_path = 'db.sqlite3'
+    # Check both possible database locations
+    db_paths = ['db.sqlite3', 'instance/db.sqlite3']
+    db_path = None
     
-    # Check if database exists
-    if not os.path.exists(db_path):
+    for path in db_paths:
+        if os.path.exists(path):
+            db_path = path
+            break
+    
+    if not db_path:
+        print("No database found. This is normal for new deployments.")
         return
     
     try:
@@ -424,9 +431,11 @@ def migrate_database():
 
 def init_db():
     """Initialize database with sample data"""
+    # Run migration first, before any SQLAlchemy operations
+    migrate_database()
+    
     with app.app_context():
-        # Run migration first
-        migrate_database()
+        # Create all tables (this will not affect existing tables)
         db.create_all()
         
         # Create sample organisations
